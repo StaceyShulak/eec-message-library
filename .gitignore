@@ -1,0 +1,11 @@
+# Secrets - never commit to GitHub
+firebase-config.js
+
+# System files
+.DS_Store
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
