@@ -186,6 +186,81 @@
       margin-top: 60px;
       font-size: 1.05em;
     }
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 20px;
+    }
+    .modal-overlay.open {
+      display: flex;
+    }
+    .modal {
+      background: #2a2a2a;
+      border: 1px solid #404040;
+      border-radius: 8px;
+      padding: 24px;
+      width: 100%;
+      max-width: 520px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal h2 {
+      font-size: 1.3em;
+      margin-bottom: 18px;
+      color: #5b9bd5;
+    }
+    .modal label {
+      display: block;
+      font-size: 0.85em;
+      color: #b0b0b0;
+      margin-bottom: 6px;
+      margin-top: 14px;
+    }
+    .modal label:first-of-type {
+      margin-top: 0;
+    }
+    .modal input[type="text"],
+    .modal textarea {
+      width: 100%;
+      padding: 10px 12px;
+      background: #1f1f1f;
+      border: 1px solid #404040;
+      border-radius: 6px;
+      color: #ffffff;
+      font-size: 0.95em;
+      font-family: inherit;
+    }
+    .modal input[type="text"]:focus,
+    .modal textarea:focus {
+      outline: none;
+      border-color: #5b9bd5;
+    }
+    .modal textarea {
+      resize: vertical;
+      line-height: 1.5;
+    }
+    .modal textarea#field-body {
+      min-height: 160px;
+    }
+    .modal textarea#field-purpose {
+      min-height: 60px;
+    }
+    .modal-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 22px;
+    }
+    .modal-buttons button {
+      flex: 1;
+    }
     @media (max-width: 768px) {
       #templates-list {
         grid-template-columns: 1fr;
@@ -205,6 +280,24 @@
     <div id="loading">Loading templates...</div>
     <div id="controls"></div>
     <div id="templates-list"></div>
+  </div>
+
+  <div class="modal-overlay" id="template-modal">
+    <div class="modal">
+      <h2 id="modal-title">Edit Template</h2>
+      <label for="field-name">Name</label>
+      <input type="text" id="field-name" />
+      <label for="field-category">Category</label>
+      <input type="text" id="field-category" placeholder="recruitment, bizdev, ..." />
+      <label for="field-purpose">Purpose</label>
+      <textarea id="field-purpose"></textarea>
+      <label for="field-body">Message body</label>
+      <textarea id="field-body"></textarea>
+      <div class="modal-buttons">
+        <button type="button" onclick="closeModal()">Cancel</button>
+        <button type="button" onclick="saveModal()">Save</button>
+      </div>
+    </div>
   </div>
   <!-- Load config first -->
   <script src="firebase-config.js"></script>
