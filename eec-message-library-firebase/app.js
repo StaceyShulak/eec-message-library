@@ -7,26 +7,31 @@ const DEFAULT_TEMPLATES = [
     name: "Passive Candidate — Startup Pitch",
     category: "recruitment",
     purpose: "First message to a passive candidate, selling the company and role.",
-    body: `Hi {{first_name}},\n\n{{company_name}} is a growing, well-funded start-up based in {{city}}. Let me know if interested!`
+    body: `Hi {{first_name}},\n\n{{company_name}} is a growing, well-funded start-up based in {{city}}. Let me know if interested!`,
+    updatedAt: null
   },
   {
     id: "smartpixel-intro",
     name: "Quick LinkedIn / Indeed Intro",
     category: "recruitment",
     purpose: "Short first-touch message naming the open role.",
-    body: `Hi {{first_name}},\n\nI came across your profile. Are you looking for a new challenge?\n\nI am hiring a {{job_title}}.\n\n{{sender_name}}`
+    body: `Hi {{first_name}},\n\nI came across your profile. Are you looking for a new challenge?\n\nI am hiring a {{job_title}}.\n\n{{sender_name}}`,
+    updatedAt: null
   },
   {
     id: "bd-launch",
     name: "New Company Launch — BD Outreach",
     category: "bizdev",
     purpose: "Congratulate a founder on launching.",
-    body: `Hi {{first_name}},\n\nCongrats on launching {{company_name}}! I specialize in recruitment and HR strategy.\n\nWould you be open to a short chat?`
+    body: `Hi {{first_name}},\n\nCongrats on launching {{company_name}}! I specialize in recruitment and HR strategy.\n\nWould you be open to a short chat?`,
+    updatedAt: null
   }
 ];
 
 let db = null;
 let templates = DEFAULT_TEMPLATES;
+let searchQuery = '';
+let activeCategory = 'all';
 
 // Initialize Firebase
 function initFirebase() {
@@ -56,11 +61,64 @@ function loadTemplates() {
     } else {
       templates = DEFAULT_TEMPLATES;
     }
+    renderControls();
     renderTemplates();
     document.getElementById('loading').style.display = 'none';
   }, (error) => {
     console.error('Load error:', error);
     showError('Failed to load templates: ' + error.message);
+  });
+}
+
+// Build the search bar + category filter buttons
+function renderControls() {
+  const controls = document.getElementById('controls');
+  if (!controls) return;
+
+  if (!Array.isArray(templates)) {
+    templates = DEFAULT_TEMPLATES;
+  }
+
+  const categories = Array.from(new Set(templates.map(t => t.category).filter(Boolean))).sort();
+
+  const categoryButtons = ['all', ...categories].map(cat => {
+    const label = cat === 'all' ? 'All' : cat;
+    const isActive = cat === activeCategory;
+    return `<button type="button" class="filter-btn${isActive ? ' active' : ''}" data-category="${escapeHtml(cat)}">${escapeHtml(label)}</button>`;
+  }).join('');
+
+  controls.innerHTML = `
+    <input type="text" id="search-input" placeholder="Search templates..." value="${escapeHtml(searchQuery)}" />
+    <div class="filter-row">${categoryButtons}</div>
+  `;
+
+  document.getElementById('search-input').addEventListener('input', (e) => {
+    searchQuery = e.target.value;
+    renderTemplates();
+  });
+
+  controls.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeCategory = btn.dataset.category;
+      renderControls();
+      renderTemplates();
+    });
+  });
+}
+
+// Apply search + category filter to the template list
+function getFilteredTemplates() {
+  if (!Array.isArray(templates)) return [];
+
+  const q = searchQuery.trim().toLowerCase();
+
+  return templates.filter(t => {
+    const matchesCategory = activeCategory === 'all' || t.category === activeCategory;
+    if (!matchesCategory) return false;
+    if (!q) return true;
+
+    const haystack = [t.name, t.category, t.purpose, t.body].filter(Boolean).join(' ').toLowerCase();
+    return haystack.includes(q);
   });
 }
 
@@ -84,13 +142,31 @@ function renderTemplates() {
   `;
   container.appendChild(addCard);
 
-  // Add existing templates
-  templates.forEach((template) => {
+  const filtered = getFilteredTemplates();
+
+  if (templates.length === 0) {
+    showEmptyState('No templates yet. Add your first one above.');
+    return;
+  }
+
+  if (filtered.length === 0) {
+    showEmptyState('No templates match your search or filter.');
+    return;
+  }
+
+  hideEmptyState();
+
+  // Add filtered templates
+  filtered.forEach((template) => {
     const card = document.createElement('div');
     card.className = 'template-card';
+    const lastEdited = template.updatedAt
+      ? `<p class="last-edited">Last edited ${formatDate(template.updatedAt)}</p>`
+      : '';
     card.innerHTML = `
       <h3>${escapeHtml(template.name)}</h3>
       <p class="category">${escapeHtml(template.category)}</p>
+      ${lastEdited}
       <div class="template-body">${escapeHtml(template.body).replace(/\n/g, '<br>')}</div>
       <div class="buttons">
         <button onclick="copyToClipboard('${template.id}')">Copy</button>
@@ -100,6 +176,32 @@ function renderTemplates() {
     `;
     container.appendChild(card);
   });
+}
+
+function showEmptyState(message) {
+  let empty = document.getElementById('empty-state');
+  const container = document.getElementById('templates-list');
+  if (!empty) {
+    empty = document.createElement('div');
+    empty.id = 'empty-state';
+    container.parentNode.insertBefore(empty, container.nextSibling);
+  }
+  empty.textContent = message;
+  empty.style.display = 'block';
+}
+
+function hideEmptyState() {
+  const empty = document.getElementById('empty-state');
+  if (empty) empty.style.display = 'none';
+}
+
+function formatDate(iso) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  } catch {
+    return '';
+  }
 }
 
 // Add new template
@@ -122,7 +224,8 @@ function addNewTemplate() {
     name: name,
     category: category,
     purpose: purpose,
-    body: body
+    body: body,
+    updatedAt: new Date().toISOString()
   };
 
   templates.push(newTemplate);
@@ -147,6 +250,7 @@ function editTemplate(id) {
   const newBody = prompt('Edit template body:', template.body);
   if (newBody !== null && newBody !== template.body) {
     template.body = newBody;
+    template.updatedAt = new Date().toISOString();
     saveTemplates();
   }
 }
@@ -171,6 +275,7 @@ function saveTemplates() {
       alert('Save failed: ' + error.message);
     } else {
       alert('Saved!');
+      renderControls();
       renderTemplates();
     }
   });
@@ -179,7 +284,7 @@ function saveTemplates() {
 // Utility: escape HTML
 function escapeHtml(text) {
   const div = document.createElement('div');
-  div.textContent = text;
+  div.textContent = text == null ? '' : String(text);
   return div.innerHTML;
 }
 
